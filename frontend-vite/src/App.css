@@ -1,0 +1,301 @@
+/* Main App container */
+.App {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Header Styles */
+.App-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.App-header h1 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.App-header p {
+  color: #7f8c8d;
+  font-size: 1.1em;
+}
+
+/* Daily Challenge Styles */
+.daily-challenge {
+  background: #e8545d;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 8px;
+  border-left: 4px solid #3494db;
+}
+
+/* Search Form Styles */
+.search-form {
+  display: flex;
+  gap: 15px;
+  margin: 20px 0;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.search-form select {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  min-width: 200px;
+}
+
+.search-form button {
+  padding: 12px 20px;
+  background: #3494db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.search-form button:hover {
+  background: #2980b9;
+}
+
+/* Loading Indicator */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2rem;
+  color: #7f8c8d;
+}
+
+/* Issue container grid */
+.issues-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+/* Issue Card Styles */
+.issue-card {
+  border: 1px solid #eee;
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 8px;
+  background: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.issue-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.issue-title {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.repo-name {
+  color: #3494db;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.issue-body {
+  color: #555;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.issue-meta {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+  color: #7f8c8d;
+}
+
+.meta-creator, .meta-date {
+  font-size: 0.9em;           /* Both will have smaller text */
+  color: #666;               /* Both will have gray color */
+  display: inline-block;     /* Both will be inline blocks */
+  margin-right: 10px;
+}
+
+.labels-container {
+  margin-bottom: 15px;
+}
+
+/* Label Styles */
+.label-badge {
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  margin-right: 4px;
+  display: inline-block;
+}
+
+.view-issue-link {
+  display: inline-block;
+  padding: 8px 15px;
+  background: #27ae60;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+
+.view-issue-link:hover {
+  background: #219a52;
+  color: white;
+}
+
+/* Progress Tracker Styles */
+.progress-tracker {
+  margin: 15px 0;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.status-selector {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.status-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 3px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.status-btn.active {
+  border: 2px solid #333;
+}
+
+.progress-container {
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  height: 10px;
+  overflow: hidden;
+}
+
+
+.progress-bar {
+  height: 100%;
+  background-color: #4CAF50;
+  transition: width 0.3s ease;
+}
+
+.progress-label {
+  font-size: 0.7em;
+  color: #666;
+  margin-top: 5px;
+  display: block;
+}
+
+/* AI Summary Styles */
+.ai-summary-section {
+  margin: 10px 0;
+}
+
+.loading-summary {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.ai-summary {
+  color: #333;
+  font-size: 0.9em;
+  line-height: 1.4;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}
+
+/* User Profile Styles */
+.user-profile {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-right: 20px;
+}
+
+.profile-info h2 {
+  margin: 0 0 5px 0;
+}
+
+.profile-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab, .active-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+
+.active-tab {
+  border-bottom-color: #3498db;
+  color: #3494db;
+  font-weight: bold;
+}
+
+.history-item, .solved-item, .progress-item {
+  border: 1px solid #eee;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 4px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  color: white;
+  margin: 5px 0;
+}
+
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+

@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+*/node_modules/  # This ensures node_modules are ignored in both frontend and backend subdirectories
+
+# Build outputs
+dist/
+dist-ssr/
+build/  # Standard React build output directory
+*/dist/
+*/build/
+
+# Environment variables
+.env
+
+# Local files
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
