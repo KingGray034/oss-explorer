@@ -1,174 +1,378 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import IssueCard from "./IssueCard";
 
+const UserProfile = ({ userData }) => {
+    const [searchParams, setSearchParams] = useSearchParams();
 
-const UserProfile = () => {
-    const [user, setUser] = useState(null);
-    const [activeTab, setActiveTab] = useState('history'); // 'History', 'Solved' etc.
-
-    // Mock user data (will be replaced with real data fetching)
-    const mockUserData = {
-        username: 'john_doe',
-        avatar: '/images/default-avatar.png',
-        contributions: 25,
-        solvedIssues: [
+    // Initialize user state with provided data or default mock data
+    const [user, setUser] = useState(userData || {
+        username: 'johndoe',
+        avatar: 'https://via.placeholder.com/100',
+        bio: 'Open source enthusiast. Love contributing to projects and helping others.',
+        location: 'San Francisco, CA',
+        website: 'https://johndoe.dev',
+        joined: 'January 2020',
+        stats: {
+            followers: 120,
+            following: 80,
+            solved: 45
+        },
+        recentActivity: [
             {
-                id: 1,
-                title: 'Fix login authentication bug',
+                type: 'solved',
+                issue: 'Fix login authentication bug',
                 repo: 'facebook/react',
-                status: 'completed',
-                solvedAt: '2024-01-15',
-                progressHistory: [
-                    { status: 'in-progress', timestamp: '2024-01-10' },
-                    { status: 'pull-request', timestamp: '2024-01-12' },
-                    { status: 'completed', timestamp: '2024-01-15' }
-                ]
+                date: '2 days ago'
             },
             {
-                id: 2,
-                title: 'Add dark mode toggle feature',
-                repo: 'microsoft/vscode',
-                status: 'in-progress',
-                solvedAt: null,
-                progressHistory: [
-                    { status: 'in-progress', timestamp: '2024-01-17' }
-                ]
-            }
-        ],
-        history: [
-            {
-                id: 3,
-                title: 'Update documentation for API usage',
-                repo: 'google/material-ui',
-                viewedAt: '2024-01-20',
-                status: 'viewed'
+                type: 'commented',
+                issue: 'Add dark mode feature',
+                repo: 'vuejs/vue',
+                date: '1 week ago'
             }
         ]
-    };
+    });
 
+    const initialTab = searchParams.get('tab') || 'saved';
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const [savedIssues, setSavedIssues] = useState([]);
+    const [issueStatuses, setIssueStatuses] = useState({});
 
+    // Update active tab when URL parameter changes
     useEffect(() => {
-        setUser(mockUserData);
+        const tabFromURL = searchParams.get('tab');
+        if (tabFromURL) {
+            setActiveTab(tabFromURL);
+        }
+    }, [searchParams]);
+    
+    // Load Saved Issues and statuses from LocalStorage
+    useEffect(() => {
+        const saved = JSON.parse(localStorage.getItem('savedIssues') || '[]');
+        const statuses = JSON.parse(localStorage.getItem('issueStatuses') || '{}');
+        setSavedIssues(saved);
+        setIssueStatuses(statuses);
     }, []);
 
+    // Update stats whenever saved issues or statuses change
+    useEffect(() => {
+        const solvedCount = Object.values(issueStatuses).filter(status => status === 'completed').length;
+        setUser(prev => ({
+            ...prev,
+            stats: {
+                ...prev.stats,
+                solved: solvedCount
+            }
+        }));
+    }, [issueStatuses]);
 
-    const getStatusColor = (status) => {
-        switch(status) {
-            case 'completed': return 'bg-green-500';
-            case 'pull-request': return 'bg-yellow-500';
-            case 'in-progress': return 'bg-blue-500';
-            default: return 'bg-gray-500';
-        }
+    const handleTabChange = (tabName) => {
+        setActiveTab(tabName);
+        setSearchParams({ tab: tabName });
     };
 
-    const getStatusText = (status) => {
-        switch(status) {
-            case 'completed': return 'Completed';
-            case 'pull-request': return 'Pull Request Created';
-            case 'in-progress': return 'In Progress';
-            default: return 'Unknown';
-        }
+    //Handler for when issue status changes from IssueCard component
+    const handleStatusChange = (issueId, newStatus) => {
+        const updatedStatuses = {
+            ...issueStatuses,
+            [issueId]: newStatus
+        };
+        setIssueStatuses(updatedStatuses)
+        localStorage.setItem('issueStatuses', JSON.stringify(updatedStatuses));
+        console.log(`Issue ${issueId} status changed to ${newStatus}`);
     };
+
+    // Unsaving an Issue
+    const handleUnsave = (issueId) => {
+        const updated = savedIssues.filter(issue => issue.id !== issueId);
+        setSavedIssues(updated);
+        localStorage.setItem('savedIssues', JSON.stringify(updated));
+
+        const updatedStatuses = { ...issueStatuses };
+        delete updatedStatuses[issueId];
+        setIssueStatuses(updatedStatuses);
+        localStorage.setItem('issueStatuses', JSON.stringify(updatedStatuses));
+    };
+
+    // Filter issues by status
+    const solvedIssues = savedIssues.filter(issue => 
+        issueStatuses[issue.id] === 'completed'
+    );
+
+    const inProgressIssues = savedIssues.filter(issue =>
+        issueStatuses[issue.id] === 'in-progress' ||
+        issueStatuses[issue.id] === 'pull-request'
+    );
+
+    const notStartedIssues = savedIssues.filter(issue =>
+        !issueStatuses[issue.id] ||
+        issueStatuses[issue.id] === 'not-started'
+    );
 
     return (
         <div className="user-profile">
             <div className="profile-header">
-                <img src={user?.avatar} alt="User Avatar" className="avatar" />
+                <img src={user.avatar} alt={`${user.username}'s avatar`} className="avatar" />
                 <div className="profile-info">
-                    <h2>{user?.username}</h2>
-                    <p>Contributions: {user?.contributions}</p>
+                    <h2>{user.username}</h2>
+                    <p className="bio">{user.bio}</p>
+                    <div className="profile-stats">
+                        <div className="stat">
+                            <span className="stat-number">{user.stats.followers}</span>
+                            <span className="stat-label">Followers</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat-number">{user.stats.following}</span>
+                            <span className="stat-label">Following</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat-number">{savedIssues.length}</span>
+                            <span className="stat-label">Saved</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat-number">{user.stats.solved}</span>
+                            <span className="stat-label">Solved</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat-number">{inProgressIssues.length}</span>
+                            <span className="stat-label">In Progress</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div className="profile-tabs">
                 <button
-                    className={activeTab === 'history' ? 'active-tab' : 'tab'}
-                    onClick={() => setActiveTab('history')}
+                    className={`tab ${activeTab === 'saved' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('saved')}
                 >
-                    History
+                    Saved Issues ({savedIssues.length})
                 </button>
                 <button
-                    className={activeTab === 'solved' ? 'active-tab' : 'tab'}
-                    onClick={() => setActiveTab('solved')}
+                    className={`tab ${activeTab === 'solved' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('solved')}
                 >
-                    Solved Issues
+                    Solved ({solvedIssues.length})
                 </button>
                 <button
-                    className={activeTab === 'progress' ? 'active-tab' : 'tab'}
-                    onClick={() => setActiveTab('progress')}
+                    className={`tab ${activeTab === 'in-progress' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('in-progress')}
                 >
-                    In Progress
+                    In Progress ({inProgressIssues.length})
+                </button>
+                <button
+                    className={`tab ${activeTab === 'not-started' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('not-started')}
+                >
+                    Not Started
+                </button>
+                <button
+                    className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('activity')}
+                >
+                    Activity
+                </button>
+                <button
+                    className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('settings')}
+                >
+                    Settings
                 </button>
             </div>
 
             <div className="profile-content">
-                {activeTab === 'history' && (
-                    <div className="history-section">
-                        <h3>Recently Viewed Issues</h3>
-                        {user?.history.map(issue => (
-                            <div key={issue.id} className="history-item">
-                                <h4>{issue.title}</h4>
-                                <p>{issue.repo}</p>
-                                <p>Viewed: {issue.viewedAt}</p>
+                {activeTab === 'saved' && (
+                    <div className="saved-section">
+                        {savedIssues.length === 0 ? (
+                            <div className="empty-state-profile">
+                                <div className="empty-icon">📑</div>
+                                <h3>No Saved Issues Yet</h3>
+                                <p>Start Saving Issues from the page to track your progress!</p>
                             </div>
-                        ))}
+                        ) : (
+                            <div className="issues-container">
+                                {savedIssues.map(issue => (
+                                    <IssueCard
+                                        key={issue.id}
+                                        issue={issue}
+                                        showProgressTracker={true}
+                                        initialStatus={issueStatuses[issue.id] || 'not-started'}
+                                        onStatusChange={(newStatus) => handleStatusChange(issue.id, newStatus)}
+                                        onUnsave={handleUnsave}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {activeTab === 'solved' && (
                     <div className="solved-section">
-                        <h3>Solved Issues</h3>
-                        {user?.solvedIssues.filter(issue => issue.status === 'completed').map(issue => (
-                            <div key={issue.id} className="solved-item">
-                                <h4>{issue.title}</h4>
-                                <p>{issue.repo}</p>
-                                <p>Solved: {issue.solvedAt}</p>
-                                <div className="status-badge">
-                                    <span className={`status-dot ${getStatusColor(issue.status)}`}></span>
-                                    {getStatusText(issue.status)}
-                                </div>
+                        {solvedIssues.length === 0 ? (
+                            <div className="empty-state-profile">
+                                <div className="empty-icon">✅</div>
+                                <h3>No Solved Issues Yet</h3>
+                                <p>Mark issues as complete to see them here!</p>
                             </div>
-                        ))}
+                        ) : (
+                            <div className="issues-container">
+                                {solvedIssues.map(issue => (
+                                    <IssueCard
+                                        key={issue.id}
+                                        issue={issue}
+                                        showProgressTracker={true}
+                                        initialStatus={issueStatuses[issue.id]}
+                                        onStatusChange={(newStatus) => handleStatusChange(issue.id, newStatus)}
+                                        onUnsave={handleUnsave}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {activeTab === 'progress' && (
-                    <div className="progress-section">
-                        <h3>In Progress Issues</h3>
-                        {user?.solvedIssues.filter(issue => issue.status !== 'completed').map(issue => (
-                            <div key={issue.id} className="progress-item">
-                                <h4>{issue.title}</h4>
-                                <p>{issue.repo}</p>
-                                <div className="status-badge">
-                                    <span className={`status-dot ${getStatusColor(issue.status)}`}></span>
-                                    {getStatusText(issue.status)}
-                                </div>
-                                <ProgressBar status={issue.status} />
+                {activeTab === 'in-progress' && (
+                    <div className="in-progress-section">
+                        {inProgressIssues.length === 0 ? (
+                            <div className="empty-state-profile">
+                                <div className="empty-icon">🚀</div>
+                                <h3>No Issues In Progress</h3>
+                                <p>Start working on some issues!</p>
                             </div>
-                        ))}
+                        ) : (
+                            <div className="issues-container">
+                                {inProgressIssues.map(issue => (
+                                    <IssueCard
+                                        key={issue.id}
+                                        issue={issue}
+                                        showProgressTracker={true}
+                                        initialStatus={issueStatuses[issue.id]}
+                                        onStatusChange={(newStatus) => handleStatusChange(issue.id, newStatus)}
+                                        onUnsave={handleUnsave}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'not-started' && (
+                    <div className="not-started-section">
+                        {notStartedIssues.length === 0 ? (
+                            <div className="empty-state-profile">
+                                <div className="empty-icon">📑</div>
+                                <h3>No Issues Waiting</h3>
+                                <p>All your saved issues have been started!</p>
+                            </div>
+                        ) : (
+                            <div className="issues-container">
+                                {notStartedIssues.map(issue => (
+                                    <IssueCard
+                                        key={issue.id}
+                                        issue={issue}
+                                        showProgressTracker={true}
+                                        initialStatus={issueStatuses[issue.id] || 'not-started'}
+                                        onStatusChange={(newStatus) => handleStatusChange(issue.id, newStatus)}
+                                        onUnsave={handleUnsave}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'activity' && (
+                    <div className="activity-section">
+                        <h3>Recent Activity</h3>
+                        {user.recentActivity && user.recentActivity.length > 0 ? (
+                            <div className="activity-list">
+                                {user.recentActivity.map((activity, index) => (
+                                    <div key={index} className="activity-item">
+                                        <span className="activity-type">
+                                            {activity.type === 'solved' ? '✅' : '💬'}
+                                        </span>
+                                        <div className="activity-details">
+                                            <p><strong>{activity.issue}</strong></p>
+                                            <p className="activity-meta">
+                                                {activity.repo} • {activity.date}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-state-profile">
+                                <div className="empty-icon">📊</div>
+                                <h3>No Recent Activity</h3>
+                                <p>your activity will appear here as you interact with issues.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {activeTab === 'settings' && (
+                    <div className="settings-section">
+                        <h3>Settings</h3>
+                        <div className="settings-content">
+                            <div className="setting-group">
+                                <h4>Profile Information</h4>
+                                <div className="setting-item">
+                                    <label>Username</label>
+                                    <input type="text" value={user.username} readOnly />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Bio</label>
+                                    <textarea value={user.bio} readOnly rows="3" />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Location</label>
+                                    <input type="text" value={user.location} readOnly />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Website</label>
+                                    <input type="url" value={user.website} readOnly />
+                                </div>
+                            </div>
+
+                            <div className="setting-group">
+                                <h4>Preferences</h4>
+                                <div className="setting-item">
+                                    <label>
+                                        <input type="checkbox" defaultChecked />
+                                        Show progress tracker on saved issues
+                                    </label>
+                                </div>
+                                <div className="setting-item">
+                                    <label>
+                                        <input type="checkbox" defaultChecked />
+                                        Show progress tracker on saved issues
+                                    </label>
+                                </div>
+                                <div className="setting-item">
+                                    <label>
+                                        <input type="checkbox" />
+                                        Public profile
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="setting-group">
+                                <h4>Data Management</h4>
+                                <button className="danger-btn" onClick={() => {
+                                    if (window.confirm('Are you sure? This will clear all the saved issues andf progress.')) {
+                                        localStorage.removeItem('savedIssues');
+                                        localStorage.removeItem('issueStatuses');
+                                        setSavedIssues([]);
+                                        setIssueStatuses({});
+                                    }
+                                }}>
+                                    Clear All Data
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
-        </div>
-    );
-};
-
-// ProgressBar Component
-const ProgressBar = ({ status }) => {
-    const progressMap = {
-        'in-progress': 33,
-        'pull-request': 66,
-        'completed': 100
-    };
-
-    const progress = progressMap[status] || 0;
-
-    return (
-        <div className="progress-container">
-            <div
-                className="progress-bar"
-                style={{ width: `${progress}%` }}
-            />
-            <span className="progress-label">{status}</span>
         </div>
     );
 };

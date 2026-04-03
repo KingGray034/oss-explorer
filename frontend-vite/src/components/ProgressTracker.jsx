@@ -1,53 +1,72 @@
-import React from "react";
+import { useState, useEffect } from "react";
 
+const ProgressTracker = ({ initialStatus = 'not-started', onStatusChange }) => {
+    const [currentStatus, setCurrentStatus] = useState(initialStatus);
 
-const ProgressTracker = ({ issue, onStatusChange }) => {
+    // Update local status when initialStatus prop changes
+    useEffect(() => {
+        setCurrentStatus(initialStatus);
+    }, [initialStatus]);
+
+    //List of statuses and color
     const statusOptions = [
-        { value: 'in-progress', label: 'In Progress', color: 'bg-blue-500' },
-        { value: 'pull-request', label: 'Pull Request Created', color: 'bg-yellow-500' },
-        { value: 'completed', label: 'Completed', color: 'bg-green-500' }
+        { value: 'not-started', label: 'Not Started', color: '#95a5a6' }, //Gray
+        { value: 'in-progress', label: 'In Progress', color: '#3498db' }, //Blue
+        { value: 'pull-request', label: 'Pull Request', color: '#f39c12' }, //Orange
+        { value: 'completed', label: 'Completed', color: '#27ae60' } //Green
     ];
+
+    const handleStatusChange = (newStatus) => {
+        setCurrentStatus(newStatus);
+        if (onStatusChange) {
+            onStatusChange(newStatus);
+        }
+    };
+
+    const calculateProgress = (status) => {
+        switch(status) {
+            case 'in-progress': return 33;
+            case 'pull-request': return 66;
+            case 'completed': return 100;
+            default: return 0;
+        }
+    };
+
+    const progressPercentage = calculateProgress(currentStatus);
+    const currentStatusLabel = statusOptions.find(opt => opt.value === currentStatus)?.label || 'Not Started';
 
     return (
         <div className="progress-tracker">
             <h4>Track Progress</h4>
             <div className="status-selector">
                 {statusOptions.map(option => (
-                    <button
-                        key={option.value}
-                        className={`status-btn ${issue.status === option.value ? 'active' : ''}`}
-                        onClick={() => onStatusChange(option.value)}
-                        style={{ backgroundColor: option.color.replace('bg-', '') }}
+                    <button 
+                        key={option.value} 
+                        className={`status-btn ${currentStatus === option.value ? 'active' : ''}`} 
+                        onClick={() => handleStatusChange(option.value)} 
+                        style={{ 
+                            backgroundColor: currentStatus === option.value ? option.color : 'transparent', 
+                            color: currentStatus === option.value ? '#fff' : option.color, 
+                            border: `2px solid ${option.color}`
+                        }}
                     >
                         {option.label}
                     </button>
                 ))}
             </div>
 
-            <ProgressBar status={issue.status} />
+            <div className="progress-container">
+                <div 
+                    className="progress-bar" 
+                    style={{ 
+                        width: `${progressPercentage}%`, 
+                        backgroundColor: statusOptions.find(opt => opt.value === currentStatus)?.color || '#95a5a6' 
+                    }} 
+                />
+                <span className="progress-label">{progressPercentage}% - {currentStatusLabel}</span>
+            </div>
         </div>
     );
 };
-
-const ProgressBar = ({ status }) => {
-    const progressMap = {
-        'in-progress': 33,
-        'pull-request': 66,
-        'completed': 100
-    };
-
-    const progress = progressMap[status] || 0;
-
-    return (
-        <div className="progress-container">
-            <div 
-                className="progress-bar"
-                style={{ width: `${progress}%` }}
-            />
-            <span className="progress-label">{status}</span>
-        </div>
-    );
-};
-
 
 export default ProgressTracker;

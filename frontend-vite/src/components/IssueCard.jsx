@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
-import { fetchRepoFiles, getAISummary } from "../services/github";
+import { useEffect, useState, useRef } from "react";
+import { fetchRepoFiles, getAISummaryDirect } from "../services/aiQueue";
 import ProgressTracker from "./ProgressTracker";
 
 
-const IssueCard = ({ issue, onStatusChange }) => {
-    // State for AI summary and loading
+const IssueCard = ({ issue, showProgressTracker = false, initialStatus = 'not-started', onStatusChange, onUnsave }) => {
     const [aiSummary, setAiSummary] = useState('');
     const [loadingSummary, setLoadingSummary] = useState(false);
-    const [repoFiles, setRepoFiles] = useState({ readme: '', contributing: '' });
+    const [isSaved, setIsSaved] = useState(false);
+    const [isVisible, setIsVisible] = useState(false)
+    const cardRef = useRef(null);
 
     const {
         title,
@@ -19,59 +20,128 @@ const IssueCard = ({ issue, onStatusChange }) => {
         labels
     } = issue;
 
-    // Extract repository owner and name from URL
     const repoParts = repository_url.split('/');
     const owner = repoParts[repoParts.length - 2];
     const repo = repoParts[repoParts.length - 1];
+    const repoName = `${owner}/${repo}`;
 
-    // Fetch repository files and get AI summary
+    // Check if issue is already saved on mount 
     useEffect(() => {
+        const savedIssues = JSON.parse(localStorage.getItem('savedIssues') || '[]');
+        const isAlreadySaved = savedIssues.some(saved => saved.id === issue.id);
+        setIsSaved(isAlreadySaved);
+    }, [issue.id]);
+
+    // Detect when card is visible in viewport
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (cardRef.current) {
+            observer.observe(cardRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    // Only fetch AI summary when card becomes visible
+    useEffect(() => {
+        if (!isVisible) return;
+
         const loadRepoData = async () => {
             setLoadingSummary(true);
             try {
-                // Fetch README content 
                 const files = await fetchRepoFiles(owner, repo);
-                setRepoFiles(files);
 
-                // Get AI summary
-                const summary = await getAISummary(body || title, files.readme, repo);
+                const summary = await getAISummaryDirect(
+                    body || title,
+                    files.readme,
+                    repoName,
+                    html_url
+                );
                 setAiSummary(summary);
             } catch (error) {
-                console.error('Error loading repo ', error);
-                setAiSummary(body || title); // Fallback to original body
+                console.error('Error Loading repo data:', error);
+                const fallbackText = body || title;
+                setAiSummary(
+                    fallbackText.length > 200
+                        ? fallbackText.substring(0, 200) + '...'
+                        : fallbackText
+                );
             } finally {
                 setLoadingSummary(false);
             }
         };
-
-        if (body || repo) { //Only load if we have data
+        if (owner && repo && (body || title)) {
             loadRepoData();
         }
-    }, [owner, repo, body, title]);
+    }, [isVisible, owner, repo, body, title, repoName, html_url]);
 
-    const truncateText = (text, maxLength = 200) => {
-        if (!text) return '';
-        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    const handleSave = () => {
+        const savedIssues = JSON.parse(localStorage.getItem('savedIssues') || '[]');
+        if (isSaved) {
+            // Unsave
+            const updated = savedIssues.filter(saved => saved.id !== issue.id);
+            localStorage.setItem('savedIssues', JSON.stringify(updated));
+            
+            // Remove from statuses
+            const statuses = JSON.parse(localStorage.getItem('issueStatuses') || '{}');
+            delete statuses[issue.id];
+            localStorage.setItem('issueStatuses', JSON.stringify(statuses));
+            setIsSaved(false);
+            console.log('Unsaved issue:', issue.id);
+
+            // Notify parent if this is being called from profile
+            if (onUnsave) {
+                onUnsave(issue.id)
+            }
+        } else {
+            // Save the issue
+            const issueToSave = {
+                id: issue.id,
+                title,
+                body,
+                html_url,
+                repository_url,
+                created_at,
+                user,
+                labels
+            };
+            
+            savedIssues.push(issueToSave);
+            localStorage.setItem('savedIssues', JSON.stringify(savedIssues));
+
+            //  Initialize status as 'not-started'
+            const statuses = JSON.parse(localStorage.getItem('issueStatuses') || '{}');
+            statuses[issue.id] = 'not-started';
+            localStorage.setItem('issueStatuses', JSON.stringify(statuses));
+            setIsSaved(true);
+            console.log('Saved issue:', issue.id);
+        }
     };
 
-    const repoName = repository_url.split('/').slice(-2).join('/');
-
-
     return (
-        <div className="issue-card">
-            {/* Issue Title */}
+        <div className="issue-card" ref={cardRef}>
             <h3 className="issue-title">{title}</h3>
-            <p className="repo-name">{repoName}</p>
+            <p className="repo-name">📦 {repoName}</p>
 
-            {/* AI Summary Section */}
             <div className="ai-summary-section">
                 {loadingSummary ? (
-                    <p className="loading-summary">Analyzing issue...</p>
+                    <div className="loading-summary">
+                        <span className="loading-dots">Analyzing issue</span>
+                    </div>
                 ) : (
-                    <p  className="ai-summary">{truncateText(aiSummary, 200)}</p>
+                    <div className="ai-summary">{aiSummary}</div>
                 )}
             </div>
-
+            
             {/* Issue Metadata */}
             <div className="issue-meta">
                 <span className="meta-creator">👤 {user.login}</span>
@@ -79,24 +149,54 @@ const IssueCard = ({ issue, onStatusChange }) => {
             </div>
 
             {/* Issue Labels */}
-            <div className="labels-container">
-                {labels.slice(0, 3).map(label =>(
-                    <span key={label.id} className="label-badge" style={{ background: `#${label.color}` }}>
-                        {label.name}
-                    </span>
-                ))}
-            </div>
+            {labels && labels.length > 0 && (
+                <div className="labels-container">
+                    {labels.slice(0, 3).map(label => (
+                        <span 
+                            key={label.id}
+                            className="label-badge"
+                            style={{ backgroundColor: `#${label.color}` }}
+                        >
+                            {label.name}
+                        </span>
+                    ))}
+                    {labels.length > 3 && (
+                        <span className="label-badge label-more">
+                            +{labels.length - 3} more
+                        </span>
+                    )}
+                </div>
+            )}
 
             {/* Progress Tracking */}
-            <ProgressTracker
-                issue={{ status: 'not-started' }} // Default status
-                onStatusChange={(newStatus) => onStatusChange(issue.id, newStatus)}
-            />
+            {showProgressTracker && (
+                <ProgressTracker
+                    initialStatus = {initialStatus}
+                    onStatusChange={(newStatus) => {
+                        if (onStatusChange) {
+                            onStatusChange(newStatus);
+                        }
+                    }}
+                />
+            )}
 
-            {/* Link to GitHub Issue */}
-            <a href={html_url} target="_blank" rel="noopener noreferrer" className="view-issue-link">
-                View Issue on GitHub
-            </a>
+            {/* Action Buttons */}
+            <div className="issue-actions">
+                <a
+                    href={html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="view-issue-link"
+                >
+                    View on GitHub
+                </a>
+                <button 
+                    className={`save-issue-btn ${isSaved ? 'saved' : ''}`}
+                    onClick={handleSave}
+                >
+                    {isSaved ? 'Saved': 'Save'}
+                </button>
+            </div>
         </div>
     );
 };
